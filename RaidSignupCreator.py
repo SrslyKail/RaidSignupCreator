@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 #API_KEY
 #SERVER_ID
 #CHANNEL_ID
+#DISCORD_ID
 
 
 def load_configuration():
