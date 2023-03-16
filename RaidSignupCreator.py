@@ -38,7 +38,7 @@ def submit_raid_request(fight:str, dateTime:datetime, URL:str, APIKEY:str):
     if dateTime.weekday() == 2:
         dateTime = dateTime.replace(hour=19, minute=00)
     elif date.weekday() == 5:
-        dateTime = dateTime.replace(hour=10, minute=00)
+        dateTime = dateTime.replace(hour=12, minute=00)
     else:
         raise Exception("Input date was not a raid day!")
     dateTime = dateTime.replace(second=0, microsecond=0)
