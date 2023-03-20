@@ -1,8 +1,25 @@
 #cSpell:disable
-import requests
+#Default packages installed with python
 import time
 import os
 from datetime import datetime, timedelta
+
+from importlib.util import find_spec
+#Check for required additional packages
+if find_spec("requests") == None:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "requests"])
+    del sys, subprocess
+
+if find_spec("dotenv") == None:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "python-dotenv"])
+    del sys, subprocess
+
+del find_spec
+
+#Then import them
+import requests
 from dotenv import load_dotenv
 
 #User must supply the following environment variables:
@@ -10,9 +27,17 @@ from dotenv import load_dotenv
 #SERVER_ID
 #CHANNEL_ID
 
+required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID"]
 
 def load_configuration():
     load_dotenv()
+    #Check the required environment variables were created
+    envVars = os.environ
+    for requiredVar in required_env_variables:
+        if requiredVar not in envVars:
+            raise Exception(f".env file did not contain {requiredVar}")
+        
+            
 
 def next_date(today: datetime, weekday:int ):
     """
@@ -35,9 +60,9 @@ def submit_raid_request(fight:str, dateTime:datetime, URL:str, APIKEY:str):
     
     #next we need to get the day of week to set the time
     if dateTime.weekday() == 2:
-        dateTime = dateTime.replace(hour=19, minute=00)
+        dateTime = dateTime.replace(hour=18, minute=30)
     elif date.weekday() == 5:
-        dateTime = dateTime.replace(hour=10, minute=00)
+        dateTime = dateTime.replace(hour=12, minute=00)
     else:
         raise Exception("Input date was not a raid day!")
     dateTime = dateTime.replace(second=0, microsecond=0)
@@ -67,7 +92,7 @@ def main():
     next_wednesday = next_date(dt, 2)
     next_saturday = next_date(dt, 5)
 
-    submit_raid_request("Test Wednesday", next_wednesday, URL, KEY)
+    #submit_raid_request("Test Wednesday", next_wednesday, URL, KEY)
 
     #submit_raid_request("Test Saturday", next_saturday)
 
