@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 #API_KEY
 #SERVER_ID
 #CHANNEL_ID
+#DISCORD_ID
 
 required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID"]
 
@@ -75,10 +76,8 @@ def submit_raid_request(fight:str, dateTime:datetime, URL:str, APIKEY:str):
         "templateId": 10,
         "date": dateTime.strftime("%d-%m-%Y"),
         "time": dateTime.strftime("%H:%M"), 
-        "title": fight, 
-        "description": "testing API to automate event creation"
+        "title": fight
     }
-    print("Debug done")
     req = requests.post(url=URL, headers={"Authorization": APIKEY, "Content-Type": "application/json"}, json=dict)
     #print(req.json())
 
@@ -92,9 +91,9 @@ def main():
     next_wednesday = next_date(dt, 2)
     next_saturday = next_date(dt, 5)
 
-    #submit_raid_request("Test Wednesday", next_wednesday, URL, KEY)
+    submit_raid_request("O8S - Wednesday", next_wednesday, URL, KEY)
 
-    #submit_raid_request("Test Saturday", next_saturday)
+    submit_raid_request("O8S - Saturday", next_saturday, URL, KEY)
 
 if __name__=="__main__":
     main()
