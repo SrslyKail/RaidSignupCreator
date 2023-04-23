@@ -1,8 +1,25 @@
 #cSpell:disable
-import requests
+#Default packages installed with python
 import time
 import os
 from datetime import datetime, timedelta
+
+from importlib.util import find_spec
+#Check for required additional packages
+if find_spec("requests") == None:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "requests"])
+    del sys, subprocess
+
+if find_spec("dotenv") == None:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "python-dotenv"])
+    del sys, subprocess
+
+del find_spec
+
+#Then import them
+import requests
 from dotenv import load_dotenv
 
 #User must supply the following environment variables:
@@ -11,10 +28,7 @@ from dotenv import load_dotenv
 #CHANNEL_ID
 #DISCORD_ID
 
-def print_and_wait(to_print):
-    print(to_print)
-    input()
-
+required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID"]
 def load_configuration():
     load_dotenv()
 
@@ -90,7 +104,6 @@ def submit_raid_request(next_dateTime:datetime, CHANNEL_ID:str, SERVER_ID:str, A
         "title": f"{get_raid_name(SERVER_ID=SERVER_ID, API_KEY=API_KEY)} - {next_dateTime.strftime('%A')}"
     }
 
-    print_and_wait(dict)
     #Get the URL we want to post it to
     POST_URL = f"https://raid-helper.dev/api/v2/servers/{SERVER_ID}/channels/{CHANNEL_ID}/event"
 
