@@ -11,64 +11,103 @@ from dotenv import load_dotenv
 #CHANNEL_ID
 #DISCORD_ID
 
+def print_and_wait(to_print):
+    print(to_print)
+    input()
 
 def load_configuration():
     load_dotenv()
 
-def next_date(today: datetime, weekday:int ):
+def get_next_date():
     """
     Returns the date of the next occurrence of a weekday.
 
     Args:
         today (datetime): Today - must be a datetime object
-        weekday (int): The day of week you want. 0 = Monday, 1 = Tuesday, etc.
         
     Return (datetime.date): The date of the the next occurrence of that weekday
     """
-    days_ahead = weekday - today.weekday()
-    if days_ahead <= 0: #This means the day of week is today, so we should return 1 week from now
-        days_ahead += 7
-    return today + timedelta(days_ahead)
+    today = datetime.now()
 
-def submit_raid_request(fight:str, dateTime:datetime, URL:str, APIKEY:str):
-    #First, convert the dateTime to just date.
-    date = dateTime.date()
+    #If today is wednesday -> Friday
+    if 2 <= today.weekday() <= 4:
+        #Set next raid day to Saturday
+        weekday = 5
+    else:
+        #Set next raid day to Wednesday
+        weekday = 2
+
+    #See how many days ahead we need to go for the next instance of the weekday
+    days_delta = weekday - today.weekday()
+    #If we already passed that date, or its today
+    if days_delta <= 0:
+    #we need to add 1 week
+        days_delta += 7
+
+    next_date = today + timedelta(days_delta)
     
     #next we need to get the day of week to set the time
-    if dateTime.weekday() == 2:
-        dateTime = dateTime.replace(hour=19, minute=00)
-    elif date.weekday() == 5:
-        dateTime = dateTime.replace(hour=12, minute=00)
+    if next_date.weekday() == 2:
+        next_date = next_date.replace(hour=18, minute=30)
+
+    elif next_date.weekday() == 5:
+        next_date = next_date.replace(hour=12, minute=00)
     else:
+        #I can't imagine ever raising this, but might as well in case of errors
         raise Exception("Input date was not a raid day!")
-    dateTime = dateTime.replace(second=0, microsecond=0)
+    
+    #Clean the seconds/microseconds
+    next_date = next_date.replace(second=0, microsecond=0)
+    return next_date
+
+def get_raid_name(SERVER_ID:str, API_KEY:str) -> str:
+
+    #Create the URL to get the last raid
+    get_url = f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
+
+    #Get the last session by filtering for the 0th "postedEvents" in the given server
+    last_session = requests.get(url=get_url, headers={"Authorization": API_KEY}).json()["postedEvents"][0]
+
+    #Get the title of the last session
+    last_session_title = last_session["title"]
+
+    #Split it by [fight_name, date] and keep the fight_name
+    next_session_title = last_session_title.split(" - ")[0]
+
+    return next_session_title
+
+def submit_raid_request(next_dateTime:datetime, CHANNEL_ID:str, SERVER_ID:str, API_KEY:str):
     
     #Unix conversion, in case we want to use this later.
-    unix = time.mktime(dateTime.timetuple())
-    
+    unix = time.mktime(next_dateTime.timetuple())
+
+    #Put together the data we want to post up
     dict = {
         "leaderId": os.getenv('DISCORD_ID'),
         "templateId": 10,
-        "date": dateTime.strftime("%d-%m-%Y"),
-        "time": dateTime.strftime("%H:%M"), 
-        "title": fight
+        "date": next_dateTime.strftime("%d-%m-%Y"),
+        "time": next_dateTime.strftime("%H:%M"), 
+        "title": f"{get_raid_name(SERVER_ID=SERVER_ID, API_KEY=API_KEY)} - {next_dateTime.strftime('%A')}"
     }
-    req = requests.post(url=URL, headers={"Authorization": APIKEY, "Content-Type": "application/json"}, json=dict)
-    #print(req.json())
+
+    print_and_wait(dict)
+    #Get the URL we want to post it to
+    POST_URL = f"https://raid-helper.dev/api/v2/servers/{SERVER_ID}/channels/{CHANNEL_ID}/event"
+
+    #Post it
+    req = requests.post(url=POST_URL, headers={"Authorization": API_KEY, "Content-Type": "application/json"}, json=dict)
 
 def main():
     load_configuration()
     
-    URL = f"https://raid-helper.dev/api/v2/servers/{os.getenv('SERVER_ID')}/channels/{os.getenv('CHANNEL_ID')}/event"
-    KEY = os.getenv('API_KEY')
-    dt = datetime.now()
+    CHANNEL_ID = os.getenv('CHANNEL_ID')
+    SERVER_ID = os.getenv('SERVER_ID')
+    API_KEY = os.getenv('API_KEY')
 
-    next_wednesday = next_date(dt, 2)
-    next_saturday = next_date(dt, 5)
+    next_date = get_next_date()
 
-    submit_raid_request("O8S - Wednesday", next_wednesday, URL, KEY)
-
-    submit_raid_request("O8S - Saturday", next_saturday, URL, KEY)
+    #Submit next raid
+    submit_raid_request(next_date, CHANNEL_ID, SERVER_ID, API_KEY)
 
 if __name__=="__main__":
     main()
