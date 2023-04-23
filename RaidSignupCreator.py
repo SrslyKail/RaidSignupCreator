@@ -32,6 +32,13 @@ required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID"]
 def load_configuration():
     load_dotenv()
 
+def get_post_event_url(SERVER_ID:str, CHANNEL_ID:str):
+    return f"https://raid-helper.dev/api/v2/servers/{SERVER_ID}/channels/{CHANNEL_ID}/event"
+
+def get_events_info_url(SERVER_ID:str):
+    return f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
+    
+
 def get_next_date():
     """
     Returns the date of the next occurrence of a weekday.
@@ -77,7 +84,7 @@ def get_next_date():
 def get_raid_name(SERVER_ID:str, API_KEY:str) -> str:
 
     #Create the URL to get the last raid
-    get_url = f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
+    get_url = get_events_info_url(SERVER_ID)
 
     #Get the last session by filtering for the 0th "postedEvents" in the given server
     last_session = requests.get(url=get_url, headers={"Authorization": API_KEY}).json()["postedEvents"][0]
@@ -89,6 +96,30 @@ def get_raid_name(SERVER_ID:str, API_KEY:str) -> str:
     next_session_title = last_session_title.split(" - ")[0]
 
     return next_session_title
+
+def check_raid_day_availability(next_date: datetime, SERVER_ID:str, API_KEY:str):
+    url = get_events_info_url(SERVER_ID)
+    next_session = next_date.date()
+
+    sessions_info = requests.get(url=url, headers={"Authorization": API_KEY}).json()["postedEvents"]
+    #If the date of the session is after the next_date, break
+
+    for session in sessions_info:
+        unix_session_time = session["startTime"]
+        session_dateTime=datetime.fromtimestamp(unix_session_time).date()
+
+        #If the next session is before the one we want to make
+        if session_dateTime < next_session:
+            #We're clear to make a new one
+            return True
+        elif session_dateTime > next_session:
+            #If its after the one we wanna make, keep checking
+            continue
+        elif session_dateTime == next_session:
+            #If its the same, we dont want to make a new one
+            return False
+        else:
+            continue
 
 def submit_raid_request(next_dateTime:datetime, CHANNEL_ID:str, SERVER_ID:str, API_KEY:str):
     
@@ -105,7 +136,7 @@ def submit_raid_request(next_dateTime:datetime, CHANNEL_ID:str, SERVER_ID:str, A
     }
 
     #Get the URL we want to post it to
-    POST_URL = f"https://raid-helper.dev/api/v2/servers/{SERVER_ID}/channels/{CHANNEL_ID}/event"
+    POST_URL = get_post_event_url(SERVER_ID, CHANNEL_ID)
 
     #Post it
     req = requests.post(url=POST_URL, headers={"Authorization": API_KEY, "Content-Type": "application/json"}, json=dict)
@@ -119,8 +150,13 @@ def main():
 
     next_date = get_next_date()
 
-    #Submit next raid
-    submit_raid_request(next_date, CHANNEL_ID, SERVER_ID, API_KEY)
+    if check_raid_day_availability(next_date, SERVER_ID, API_KEY) == True:
+        print("We shouldnt see this")
+        input()
+        #Submit next raid
+        submit_raid_request(next_date, CHANNEL_ID, SERVER_ID, API_KEY)
+    else:
+        print(f"Event already exists on {next_date.strftime('%d-%m-%Y')}")
 
 if __name__=="__main__":
     main()
