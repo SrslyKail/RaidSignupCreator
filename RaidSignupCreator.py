@@ -81,29 +81,16 @@ def get_next_date():
     next_date = next_date.replace(second=0, microsecond=0)
     return next_date
 
-def get_raid_name(SERVER_ID:str, API_KEY:str) -> str:
+def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> dict:
+    events_url = get_events_info_url(SERVER_ID)
+    sessions_info = dict(requests.get(url=events_url, headers={"Authorization": API_KEY}).json())["postedEvents"]
+    return sessions_info
 
-    #Create the URL to get the last raid
-    get_url = get_events_info_url(SERVER_ID)
+def check_raid_day_availability(next_date: datetime, sessions_info: dict):
 
-    #Get the last session by filtering for the 0th "postedEvents" in the given server
-    last_session = requests.get(url=get_url, headers={"Authorization": API_KEY}).json()["postedEvents"][0]
-
-    #Get the title of the last session
-    last_session_title = last_session["title"]
-
-    #Split it by [fight_name, date] and keep the fight_name
-    next_session_title = last_session_title.split(" - ")[0]
-
-    return next_session_title
-
-def check_raid_day_availability(next_date: datetime, SERVER_ID:str, API_KEY:str):
-    url = get_events_info_url(SERVER_ID)
     next_session = next_date.date()
 
-    sessions_info = requests.get(url=url, headers={"Authorization": API_KEY}).json()["postedEvents"]
     #If the date of the session is after the next_date, break
-
     for session in sessions_info:
         unix_session_time = session["startTime"]
         session_dateTime=datetime.fromtimestamp(unix_session_time).date()
@@ -121,7 +108,20 @@ def check_raid_day_availability(next_date: datetime, SERVER_ID:str, API_KEY:str)
         else:
             continue
 
-def submit_raid_request(next_dateTime:datetime, CHANNEL_ID:str, SERVER_ID:str, API_KEY:str):
+def get_raid_name(all_sessions_info:dict) -> str:
+
+     #Get the last session by filtering for the 0th "postedEvents" in the given server
+    last_posted_event = all_sessions_info[0]
+
+    #Get the title of the last session
+    last_session_title = last_posted_event["title"]
+
+    #Split it by [fight_name, date] and keep the fight_name
+    next_session_title = last_session_title.split(" - ")[0]
+    
+    return next_session_title
+
+def submit_raid_request(next_dateTime:datetime, sessions_info:dict, CHANNEL_ID:str, SERVER_ID:str, API_KEY:str):
     
     #Unix conversion, in case we want to use this later.
     unix = time.mktime(next_dateTime.timetuple())
@@ -132,7 +132,7 @@ def submit_raid_request(next_dateTime:datetime, CHANNEL_ID:str, SERVER_ID:str, A
         "templateId": 10,
         "date": next_dateTime.strftime("%d-%m-%Y"),
         "time": next_dateTime.strftime("%H:%M"), 
-        "title": f"{get_raid_name(SERVER_ID=SERVER_ID, API_KEY=API_KEY)} - {next_dateTime.strftime('%A')}"
+        "title": f"{get_raid_name(sessions_info)} - {next_dateTime.strftime('%A')}"
     }
 
     #Get the URL we want to post it to
@@ -148,13 +148,14 @@ def main():
     SERVER_ID = os.getenv('SERVER_ID')
     API_KEY = os.getenv('API_KEY')
 
+
     next_date = get_next_date()
 
-    if check_raid_day_availability(next_date, SERVER_ID, API_KEY) == True:
-        print("We shouldnt see this")
-        input()
+    posted_session_data = get_posted_session_data(SERVER_ID, API_KEY)
+
+    if check_raid_day_availability(next_date, posted_session_data) == True:
         #Submit next raid
-        submit_raid_request(next_date, CHANNEL_ID, SERVER_ID, API_KEY)
+        submit_raid_request(next_date, posted_session_data, CHANNEL_ID, SERVER_ID, API_KEY)
     else:
         print(f"Event already exists on {next_date.strftime('%d-%m-%Y')}")
 
