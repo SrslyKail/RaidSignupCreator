@@ -27,10 +27,36 @@ from dotenv import load_dotenv
 #SERVER_ID
 #CHANNEL_ID
 #DISCORD_ID
-
-required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID"]
+required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID", "DISCORD_ID"]
+missing_vars: list = []
 def load_configuration():
+    """Loads the required environment variables from a .env file and checks that they loaded correctly.
+
+    Raises:
+        Exception: If the .env file is not located
+        Exception: If a environment variable is missing
+    """
+    #Get the current directory
+    current_dir = os.path.dirname(__file__)
+    #Check the .env file exists
+    if os.path.exists(f"{current_dir}\\.env") == False:
+        raise Exception(f"Missing .env file. Check for a .env file at {current_dir}")
+    
+    #If it does, load the file
     load_dotenv()
+    
+    #Check the variables were loaded
+    for variable in required_env_variables:
+        if os.getenv(variable) is None:
+           missing_vars.append(variable)
+           
+    #If everything worked, return
+    if missing_vars == []:
+        return
+    #Else raise an exception and inform the user what they need to add
+    raise Exception(f"Missing required enviroment variables: {missing_vars}")
+    
+    
 
 def get_post_event_url(SERVER_ID:str, CHANNEL_ID:str):
     return f"https://raid-helper.dev/api/v2/servers/{SERVER_ID}/channels/{CHANNEL_ID}/event"
