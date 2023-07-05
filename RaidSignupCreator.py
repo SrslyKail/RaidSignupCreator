@@ -91,10 +91,10 @@ def get_next_date():
     #If today is wednesday -> Friday
     if 2 <= today.weekday() <= 4:
         #Set next raid day to Saturday
-        weekday = 5
+        weekday = saturday_raid.day
     else:
         #Set next raid day to Wednesday
-        weekday = 2
+        weekday = wednesday_raid.day
 
     #See how many days ahead we need to go for the next instance of the weekday
     days_delta = weekday - today.weekday()
