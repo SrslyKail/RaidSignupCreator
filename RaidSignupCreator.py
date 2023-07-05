@@ -54,7 +54,7 @@ def load_configuration():
     if missing_vars == []:
         return
     #Else raise an exception and inform the user what they need to add
-    raise Exception(f"Missing required enviroment variables: {missing_vars}")
+    raise Exception(f"Missing required environment variables: {missing_vars}")
     
     
 
