@@ -65,16 +65,14 @@ def get_events_info_url(SERVER_ID:str):
     return f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
 
 class wednesday_raid:
-    def __init__(self):
-        self.day = 2
-        self.hr = 19
-        self.min = 0
+    weekday = 2
+    hours = 19
+    minutes = 0
 
 class saturday_raid:
-    def __init__(self):
-        self.day = 5
-        self.hr = 12
-        self.min = 0
+    weekday = 5
+    hours = 12
+    minutes = 0
     
 
 def get_next_date():
@@ -91,10 +89,10 @@ def get_next_date():
     #If today is wednesday -> Friday
     if 2 <= today.weekday() <= 4:
         #Set next raid day to Saturday
-        weekday = saturday_raid.day
+        weekday = saturday_raid.weekday
     else:
         #Set next raid day to Wednesday
-        weekday = wednesday_raid.day
+        weekday = wednesday_raid.weekday
 
     #See how many days ahead we need to go for the next instance of the weekday
     days_delta = weekday - today.weekday()
@@ -107,10 +105,10 @@ def get_next_date():
     
     #next we need to get the day of week to set the time
     if next_date.weekday() == 2:
-        next_date = next_date.replace(hour=wednesday_raid.hr, minute=wednesday_raid.min)
+        next_date = next_date.replace(hour=wednesday_raid.hours, minute=wednesday_raid.minutes)
 
     elif next_date.weekday() == 5:
-        next_date = next_date.replace(hour=saturday_raid.hr, minute=saturday_raid.min)
+        next_date = next_date.replace(hour=saturday_raid.hours, minute=saturday_raid.minutes)
     else:
         #I can't imagine ever raising this, but might as well in case of errors
         raise Exception("Input date was not a raid day!")
