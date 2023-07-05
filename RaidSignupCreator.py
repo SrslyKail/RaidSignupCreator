@@ -63,6 +63,18 @@ def get_post_event_url(SERVER_ID:str, CHANNEL_ID:str):
 
 def get_events_info_url(SERVER_ID:str):
     return f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
+
+class wednesday_raid:
+    def __init__(self):
+        self.day = 2
+        self.hr = 19
+        self.min = 0
+
+class saturday_raid:
+    def __init__(self):
+        self.day = 5
+        self.hr = 12
+        self.min = 0
     
 
 def get_next_date():
@@ -95,10 +107,10 @@ def get_next_date():
     
     #next we need to get the day of week to set the time
     if next_date.weekday() == 2:
-        next_date = next_date.replace(hour=18, minute=30)
+        next_date = next_date.replace(hour=wednesday_raid.hr, minute=wednesday_raid.min)
 
     elif next_date.weekday() == 5:
-        next_date = next_date.replace(hour=12, minute=00)
+        next_date = next_date.replace(hour=saturday_raid.hr, minute=saturday_raid.min)
     else:
         #I can't imagine ever raising this, but might as well in case of errors
         raise Exception("Input date was not a raid day!")
