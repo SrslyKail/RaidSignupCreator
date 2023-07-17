@@ -129,7 +129,7 @@ def check_raid_day_availability(next_date: datetime, sessions_info: dict):
     #If the date of the session is after the next_date, break
     for session in sessions_info:
         unix_session_time = session["startTime"]
-        session_dateTime=datetime.fromtimestamp(unix_session_time).date()
+        session_dateTime  = datetime.fromtimestamp(unix_session_time).date()
 
         #If the next session is before the one we want to make
         if session_dateTime < next_session:
