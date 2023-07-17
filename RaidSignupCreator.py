@@ -66,12 +66,12 @@ def get_events_info_url(SERVER_ID:str):
 
 class wednesday_raid:
     weekday = 2
-    hours = 19
+    hours   = 19
     minutes = 0
 
 class saturday_raid:
     weekday = 5
-    hours = 12
+    hours   = 12
     minutes = 0
     
 
@@ -118,7 +118,7 @@ def get_next_date():
     return next_date
 
 def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> dict:
-    events_url = get_events_info_url(SERVER_ID)
+    events_url    = get_events_info_url(SERVER_ID)
     sessions_info = dict(requests.get(url=events_url, headers={"Authorization": API_KEY}).json())["postedEvents"]
     return sessions_info
 
@@ -147,7 +147,7 @@ def check_raid_day_availability(next_date: datetime, sessions_info: dict):
 def get_raid_name(all_sessions_info:dict) -> str:
 
      #Get the last session by filtering for the 0th "postedEvents" in the given server
-    last_posted_event = all_sessions_info[0]
+    last_posted_event  = all_sessions_info[0]
 
     #Get the title of the last session
     last_session_title = last_posted_event["title"]
@@ -181,8 +181,8 @@ def main():
     load_configuration()
     
     CHANNEL_ID = os.getenv('CHANNEL_ID')
-    SERVER_ID = os.getenv('SERVER_ID')
-    API_KEY = os.getenv('API_KEY')
+    SERVER_ID  = os.getenv('SERVER_ID')
+    API_KEY    = os.getenv('API_KEY')
 
 
     next_date = get_next_date()
