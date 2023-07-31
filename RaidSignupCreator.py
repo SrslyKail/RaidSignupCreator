@@ -1,34 +1,37 @@
-#cSpell:disable
 #Default packages installed with python
 import time
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from importlib.util import find_spec
-#Check for required additional packages
-if find_spec("requests") == None:
-    import sys, subprocess
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "requests"])
-    del sys, subprocess
 
-if find_spec("dotenv") == None:
-    import sys, subprocess
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "python-dotenv"])
-    del sys, subprocess
+#Check for required additional packages
+# Unfortunately, sometimes the pip installer is named differently than the local package
+# So we need a dict to do this - use local_name, pip_intaller_name
+required_packages: dict[str, str] = {
+    "requests":"requests",
+    "dotenv":"python-dotenv",
+    "dateutil":"python-dateutil"
+}
+
+for local_name, pip_name in required_packages.items():
+    if find_spec(local_name) is None:
+        import sys, subprocess
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_name])
+        del sys, subprocess
 
 del find_spec
 
 #Then import them
 import requests
 from dotenv import load_dotenv
+from dateutil.relativedelta import *
 
-#User must supply the following environment variables:
-#API_KEY
-#SERVER_ID
-#CHANNEL_ID
-#DISCORD_ID
-required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID", "DISCORD_ID"]
-missing_vars: list = []
+def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
+    # Get the next instance of the given day
+    next_date = datetime.today() + relativedelta(weekday=weekday)
+    return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
 def load_configuration():
     """Loads the required environment variables from a .env file and checks that they loaded correctly.
 
@@ -36,27 +39,28 @@ def load_configuration():
         Exception: If the .env file is not located
         Exception: If a environment variable is missing
     """
+    #User must supply the following environment variables:
+    #API_KEY, SERVER_ID, CHANNEL_ID, DISCORD_ID
+
+    required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID", "DISCORD_ID"]
+    missing_vars: list = []
+
     #Get the current directory
     current_dir = os.path.dirname(__file__)
     #Check the .env file exists
-    if os.path.exists(f"{current_dir}\\.env") == False:
+    if os.path.exists(f"{current_dir}\\.env") is False:
         raise Exception(f"Missing .env file. Check for a .env file at {current_dir}")
     
     #If it does, load the file
     load_dotenv()
-    
+
     #Check the variables were loaded
-    for variable in required_env_variables:
-        if os.getenv(variable) is None:
-           missing_vars.append(variable)
-           
-    #If everything worked, return
-    if missing_vars == []:
-        return
-    #Else raise an exception and inform the user what they need to add
-    raise Exception(f"Missing required environment variables: {missing_vars}")
-    
-    
+    missing_vars = [variable for variable in required_env_variables if os.getenv(variable) is None]
+
+    #if something is missing, raise an exception so the user can add it
+    if missing_vars:
+        raise NameError(f"Missing required environment variables: {missing_vars}")
+    return 
 
 def get_post_event_url(SERVER_ID:str, CHANNEL_ID:str):
     return f"https://raid-helper.dev/api/v2/servers/{SERVER_ID}/channels/{CHANNEL_ID}/event"
@@ -64,18 +68,7 @@ def get_post_event_url(SERVER_ID:str, CHANNEL_ID:str):
 def get_events_info_url(SERVER_ID:str):
     return f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
 
-class wednesday_raid:
-    weekday = 2
-    hours   = 19
-    minutes = 0
-
-class saturday_raid:
-    weekday = 5
-    hours   = 12
-    minutes = 0
-    
-
-def get_next_date():
+def get_next_date(raid: datetime | list[datetime]):
     """
     Returns the date of the next occurrence of a weekday.
 
@@ -84,38 +77,14 @@ def get_next_date():
         
     Return (datetime.date): The date of the the next occurrence of that weekday
     """
-    today = datetime.now()
-
-    #If today is wednesday -> Friday
-    if 2 <= today.weekday() <= 4:
-        #Set next raid day to Saturday
-        weekday = saturday_raid.weekday
-    else:
-        #Set next raid day to Wednesday
-        weekday = wednesday_raid.weekday
-
-    #See how many days ahead we need to go for the next instance of the weekday
-    days_delta = weekday - today.weekday()
-    #If we already passed that date, or its today
-    if days_delta <= 0:
-    #we need to add 1 week
-        days_delta += 7
-
-    next_date = today + timedelta(days_delta)
     
-    #next we need to get the day of week to set the time
-    if next_date.weekday() == 2:
-        next_date = next_date.replace(hour=wednesday_raid.hours, minute=wednesday_raid.minutes)
+    if not isinstance(raid, list):
+        raid = [raid]
 
-    elif next_date.weekday() == 5:
-        next_date = next_date.replace(hour=saturday_raid.hours, minute=saturday_raid.minutes)
-    else:
-        #I can't imagine ever raising this, but might as well in case of errors
-        raise Exception("Input date was not a raid day!")
-    
-    #Clean the seconds/microseconds
-    next_date = next_date.replace(second=0, microsecond=0)
-    return next_date
+    #Check for dates after today
+    possible_dates: list[datetime] = [date for date in raid if datetime.now().date() < date.date()]
+    #Get the next one
+    return min(possible_dates)
 
 def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> dict:
     events_url    = get_events_info_url(SERVER_ID)
@@ -129,7 +98,7 @@ def check_raid_day_availability(next_date: datetime, sessions_info: dict):
     #If the date of the session is after the next_date, break
     for session in sessions_info:
         unix_session_time = session["startTime"]
-        session_dateTime  = datetime.fromtimestamp(unix_session_time).date()
+        session_dateTime: datetime  = datetime.fromtimestamp(unix_session_time).date()
 
         #If the next session is before the one we want to make
         if session_dateTime < next_session:
@@ -146,7 +115,7 @@ def check_raid_day_availability(next_date: datetime, sessions_info: dict):
 
 def get_raid_name(all_sessions_info:dict) -> str:
 
-     #Get the last session by filtering for the 0th "postedEvents" in the given server
+    #Get the last session by filtering for the 0th "postedEvents" in the given server
     last_posted_event  = all_sessions_info[0]
 
     #Get the title of the last session
@@ -174,22 +143,38 @@ def submit_raid_request(next_dateTime:datetime, sessions_info:dict, CHANNEL_ID:s
     #Get the URL we want to post it to
     POST_URL = get_post_event_url(SERVER_ID, CHANNEL_ID)
 
+    print(dict)
+    print(POST_URL)
     #Post it
-    req = requests.post(url=POST_URL, headers={"Authorization": API_KEY, "Content-Type": "application/json"}, json=dict)
+    requests.post(url=POST_URL, headers={"Authorization": API_KEY, "Content-Type": "application/json"}, json=dict)
 
 def main():
     load_configuration()
     
+    wednesday_raid = get_raid_datetime(
+        weekday = 2,
+        hour   = 19,
+        minute = 0
+    )
+
+    saturday_raid = get_raid_datetime(
+        weekday = 5,
+        hour   = 12,
+        minute = 0,
+    )
+
+    raid_dates = [wednesday_raid, saturday_raid]
+
     CHANNEL_ID = os.getenv('CHANNEL_ID')
     SERVER_ID  = os.getenv('SERVER_ID')
     API_KEY    = os.getenv('API_KEY')
 
 
-    next_date = get_next_date()
+    next_date = get_next_date(raid_dates)
 
     posted_session_data = get_posted_session_data(SERVER_ID, API_KEY)
 
-    if check_raid_day_availability(next_date, posted_session_data) == True:
+    if check_raid_day_availability(next_date, posted_session_data):
         #Submit next raid
         submit_raid_request(next_date, posted_session_data, CHANNEL_ID, SERVER_ID, API_KEY)
     else:
