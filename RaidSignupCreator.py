@@ -39,9 +39,7 @@ def load_configuration():
         Exception: If the .env file is not located
         Exception: If a environment variable is missing
     """
-    #User must supply the following environment variables:
-    #API_KEY, SERVER_ID, CHANNEL_ID, DISCORD_ID
-
+    #User must supply the following environment variables via the .env file:
     required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID", "DISCORD_ID"]
     missing_vars: list = []
 
@@ -68,14 +66,14 @@ def get_post_event_url(SERVER_ID:str, CHANNEL_ID:str):
 def get_events_info_url(SERVER_ID:str):
     return f"https://raid-helper.dev/api/v3/servers/{SERVER_ID}/events"
 
-def get_next_date(raid: datetime | list[datetime]):
-    """
-    Returns the date of the next occurrence of a weekday.
+def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
+    """Gets the next date from a list of dates
 
     Args:
-        today (datetime): Today - must be a datetime object
-        
-    Return (datetime.date): The date of the the next occurrence of that weekday
+        raid (datetime | list[datetime]): a datetime or list of datetime objects
+
+    Returns:
+        datetime | None: The next date, or None if all the dates given were in the past.
     """
     
     if not isinstance(raid, list):
@@ -83,15 +81,28 @@ def get_next_date(raid: datetime | list[datetime]):
 
     #Check for dates after today
     possible_dates: list[datetime] = [date for date in raid if datetime.now().date() < date.date()]
+
+    if possible_dates is False:
+        return None
+
     #Get the next one
     return min(possible_dates)
 
-def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> dict:
+def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> list[dict]:
     events_url    = get_events_info_url(SERVER_ID)
-    sessions_info = dict(requests.get(url=events_url, headers={"Authorization": API_KEY}).json())["postedEvents"]
+    sessions_info: dict = dict(requests.get(url=events_url, headers={"Authorization": API_KEY}).json())["postedEvents"]
     return sessions_info
 
-def check_raid_day_availability(next_date: datetime, sessions_info: dict):
+def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
+    """Checks if there is already a raid scheduled on the given day
+
+    Args:
+        next_date (datetime): a datetime object for the date you want to check
+        sessions_info (dict): a dictionary of information about the next session; can be retrieved from get_posted_session_data()
+
+    Returns:
+        bool: True if the day is available, False if it is not
+    """
 
     next_session = next_date.date()
 
@@ -113,8 +124,7 @@ def check_raid_day_availability(next_date: datetime, sessions_info: dict):
         else:
             continue
 
-def get_raid_name(all_sessions_info:dict) -> str:
-
+def get_last_session_title(all_sessions_info:dict) -> str:
     #Get the last session by filtering for the 0th "postedEvents" in the given server
     last_posted_event  = all_sessions_info[0]
 
@@ -137,14 +147,12 @@ def submit_raid_request(next_dateTime:datetime, sessions_info:dict, CHANNEL_ID:s
         "templateId": 10,
         "date": next_dateTime.strftime("%d-%m-%Y"),
         "time": next_dateTime.strftime("%H:%M"), 
-        "title": f"{get_raid_name(sessions_info)} - {next_dateTime.strftime('%A')}"
+        "title": f"{get_last_session_title(sessions_info)} - {next_dateTime.strftime('%A')}"
     }
 
     #Get the URL we want to post it to
     POST_URL = get_post_event_url(SERVER_ID, CHANNEL_ID)
 
-    print(dict)
-    print(POST_URL)
     #Post it
     requests.post(url=POST_URL, headers={"Authorization": API_KEY, "Content-Type": "application/json"}, json=dict)
 
@@ -171,10 +179,12 @@ def main():
 
 
     next_date = get_next_date(raid_dates)
+    if next_date is None:
+        return
 
-    posted_session_data = get_posted_session_data(SERVER_ID, API_KEY)
+    posted_session_data: list[dict] = get_posted_session_data(SERVER_ID, API_KEY)
 
-    if check_raid_day_availability(next_date, posted_session_data):
+    if is_raid_day_available(next_date, posted_session_data):
         #Submit next raid
         submit_raid_request(next_date, posted_session_data, CHANNEL_ID, SERVER_ID, API_KEY)
     else:
