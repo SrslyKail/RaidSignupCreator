@@ -161,14 +161,14 @@ def main():
     
     wednesday_raid = get_raid_datetime(
         weekday = 2,
-        hour   = 19,
-        minute = 0
+        hour    = 19,
+        minute  = 0
     )
 
     saturday_raid = get_raid_datetime(
         weekday = 5,
-        hour   = 12,
-        minute = 0,
+        hour    = 12,
+        minute  = 0,
     )
 
     raid_dates = [wednesday_raid, saturday_raid]
