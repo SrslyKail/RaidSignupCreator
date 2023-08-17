@@ -139,7 +139,7 @@ def get_last_session_title(all_sessions_info:dict) -> str:
 def submit_raid_request(next_dateTime:datetime, sessions_info:dict, CHANNEL_ID:str, SERVER_ID:str, API_KEY:str):
     
     #Unix conversion, in case we want to use this later.
-    unix = time.mktime(next_dateTime.timetuple())
+    #unix = time.mktime(next_dateTime.timetuple())
 
     #Put together the data we want to post up
     dict = {
