@@ -1,7 +1,7 @@
 #Default packages installed with python
-import time
 import os
-from datetime import datetime
+from pathlib import Path
+from datetime import datetime, time
 
 from importlib.util import find_spec
 
@@ -44,9 +44,9 @@ def load_configuration():
     missing_vars: list = []
 
     #Get the current directory
-    current_dir = os.path.dirname(__file__)
+    current_dir = Path(__file__).parent
     #Check the .env file exists
-    if os.path.exists(f"{current_dir}\\.env") is False:
+    if Path(current_dir / ".env").exists is False:
         raise Exception(f"Missing .env file. Check for a .env file at {current_dir}")
     
     #If it does, load the file
