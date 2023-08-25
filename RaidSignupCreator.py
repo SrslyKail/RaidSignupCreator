@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 #Default packages installed with python
 import os
 from pathlib import Path
