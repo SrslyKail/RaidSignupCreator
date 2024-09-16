@@ -32,7 +32,7 @@ def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
     next_date = datetime.today() + relativedelta(weekday=weekday)
     return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-def load_configuration():
+def load_configuration() -> None:
     """Loads the required environment variables from a .env file and checks that they loaded correctly.
 
     Raises:
@@ -41,7 +41,7 @@ def load_configuration():
     """
     #User must supply the following environment variables via the .env file:
     required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID", "DISCORD_ID"]
-    missing_vars: list = []
+    missing_vars: list[str] = []
 
     #Get the current directory
     current_dir = Path(__file__).parent
@@ -53,7 +53,10 @@ def load_configuration():
     load_dotenv()
 
     #Check the variables were loaded
-    missing_vars = [variable for variable in required_env_variables if os.getenv(variable) is None]
+    missing_vars = [
+        variable for variable in required_env_variables
+            if os.getenv(variable) is None
+        ]
 
     #if something is missing, raise an exception so the user can add it
     if missing_vars:
@@ -88,9 +91,14 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
     #Get the next one
     return min(possible_dates)
 
-def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> list[dict]:
-    events_url    = get_events_info_url(SERVER_ID)
-    sessions_info: dict = dict(requests.get(url=events_url, headers={"Authorization": API_KEY}).json())["postedEvents"]
+def get_posted_session_data(SERVER_ID:str, API_KEY:str) -> dict:
+    events_url: str = get_events_info_url(SERVER_ID)
+    sessions_info: dict = dict(
+        requests.get(
+            url=events_url,
+            headers={"Authorization": API_KEY}
+            ).json()
+        )["postedEvents"]
     return sessions_info
 
 def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
@@ -109,7 +117,7 @@ def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
     #If the date of the session is after the next_date, break
     for session in sessions_info:
         unix_session_time = session["startTime"]
-        session_dateTime: datetime  = datetime.fromtimestamp(unix_session_time).date()
+        session_dateTime: date  = datetime.fromtimestamp(unix_session_time).date()
 
         #If the next session is before the one we want to make
         if session_dateTime < next_session:
@@ -123,6 +131,8 @@ def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
             return False
         else:
             continue
+        
+    return False #required to keep mypy happy
 
 def get_last_session_title(all_sessions_info:dict) -> str:
     #Get the last session by filtering for the 0th "postedEvents" in the given server
@@ -136,7 +146,13 @@ def get_last_session_title(all_sessions_info:dict) -> str:
     
     return next_session_title
 
-def submit_raid_request(next_dateTime:datetime, sessions_info:dict, CHANNEL_ID:str, SERVER_ID:str, API_KEY:str):
+def submit_raid_request(
+    next_dateTime:datetime,
+    sessions_info:dict,
+    CHANNEL_ID:str,
+    SERVER_ID:str,
+    API_KEY:str
+    ):
     
     #Unix conversion, in case we want to use this later.
     #unix = time.mktime(next_dateTime.timetuple())
@@ -154,7 +170,11 @@ def submit_raid_request(next_dateTime:datetime, sessions_info:dict, CHANNEL_ID:s
     POST_URL = get_post_event_url(SERVER_ID, CHANNEL_ID)
 
     #Post it
-    requests.post(url=POST_URL, headers={"Authorization": API_KEY, "Content-Type": "application/json"}, json=dict)
+    requests.post(
+        url=POST_URL,
+        headers={"Authorization": API_KEY, "Content-Type": "application/json"},
+        json=dict
+    )
 
 def main():
     load_configuration()
@@ -182,11 +202,17 @@ def main():
     if next_date is None:
         return
 
-    posted_session_data: list[dict] = get_posted_session_data(SERVER_ID, API_KEY)
+    posted_session_data: dict = get_posted_session_data(SERVER_ID, API_KEY)
 
     if is_raid_day_available(next_date, posted_session_data):
         #Submit next raid
-        submit_raid_request(next_date, posted_session_data, CHANNEL_ID, SERVER_ID, API_KEY)
+        submit_raid_request(
+            next_date, 
+            posted_session_data, 
+            CHANNEL_ID, 
+            SERVER_ID, 
+            API_KEY
+        )
     else:
         print(f"Event already exists on {next_date.strftime('%d-%m-%Y')}")
 
