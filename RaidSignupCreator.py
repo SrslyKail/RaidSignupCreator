@@ -1,7 +1,7 @@
 #Default packages installed with python
 import os
 from pathlib import Path
-from datetime import datetime, time
+from datetime import datetime, time, date
 
 from importlib.util import find_spec
 
@@ -17,7 +17,7 @@ required_packages: dict[str, str] = {
 for local_name, pip_name in required_packages.items():
     if find_spec(local_name) is None:
         import sys, subprocess
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_name])
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_name, '--user'])
         del sys, subprocess
 
 del find_spec
@@ -25,7 +25,7 @@ del find_spec
 #Then import them
 import requests
 from dotenv import load_dotenv
-from dateutil.relativedelta import *
+from dateutil.relativedelta import relativedelta
 
 def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
     # Get the next instance of the given day
