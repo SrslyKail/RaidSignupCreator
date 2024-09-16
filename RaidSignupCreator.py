@@ -176,7 +176,13 @@ def submit_raid_request(
         json=dict
     )
 
-def main():
+def getEnvVariable(variableName: str) -> str:
+    env_var: str | None = os.getenv(variableName)
+    if env_var is None:
+        raise KeyError(f"Missing environment variable: {variableName}")
+    return env_var
+
+def main() -> None:
     load_configuration()
     
     wednesday_raid = get_raid_datetime(
@@ -193,12 +199,11 @@ def main():
 
     raid_dates = [wednesday_raid, saturday_raid]
 
-    CHANNEL_ID = os.getenv('CHANNEL_ID')
-    SERVER_ID  = os.getenv('SERVER_ID')
-    API_KEY    = os.getenv('API_KEY')
-
-
-    next_date = get_next_date(raid_dates)
+    CHANNEL_ID = getEnvVariable('CHANNEL_ID')
+    SERVER_ID  = getEnvVariable('SERVER_ID')
+    API_KEY    = getEnvVariable('API_KEY')
+    
+    next_date: datetime | None = get_next_date(raid_dates)
     if next_date is None:
         return
 
