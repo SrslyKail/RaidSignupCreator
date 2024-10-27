@@ -1,30 +1,17 @@
 #!/usr/bin/python3
 
-#Default packages installed with python
+'''
+Keeping this chunk around because I found it useful to remind
+myself what the package names are called in pip
+organized as localName: pip_intaller_name
+"requests":"requests",
+"dotenv":"python-dotenv",
+"dateutil":"python-dateutil"
+'''
+
 import os
 from pathlib import Path
 from datetime import datetime, date
-
-from importlib.util import find_spec
-
-#Check for required additional packages
-# Unfortunately, sometimes the pip installer is named differently than the local package
-# So we need a dict to do this - use local_name, pip_intaller_name
-required_packages: dict[str, str] = {
-    "requests":"requests",
-    "dotenv":"python-dotenv",
-    "dateutil":"python-dateutil"
-}
-
-for local_name, pip_name in required_packages.items():
-    if find_spec(local_name) is None:
-        import sys, subprocess
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_name, '--user'])
-        del sys, subprocess
-
-del find_spec
-
-#Then import them
 import requests
 from dotenv import load_dotenv
 from dateutil.relativedelta import relativedelta
