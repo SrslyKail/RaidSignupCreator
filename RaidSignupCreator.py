@@ -187,19 +187,19 @@ def getEnvVariable(variableName: str) -> str:
 def main() -> None:
     load_configuration()
     
-    wednesday_raid = get_raid_datetime(
+    saturday_raid = get_raid_datetime(
         weekday = 5,
         hour    = 13,
         minute  = 0
     )
 
-    saturday_raid = get_raid_datetime(
+    sunday_raid = get_raid_datetime(
         weekday = 6,
         hour    = 13,
         minute  = 0,
     )
 
-    raid_dates = [wednesday_raid, saturday_raid]
+    raid_dates = [saturday_raid, sunday_raid]
 
     CHANNEL_ID = getEnvVariable('CHANNEL_ID')
     SERVER_ID  = getEnvVariable('SERVER_ID')
