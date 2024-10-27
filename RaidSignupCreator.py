@@ -3,7 +3,7 @@
 #Default packages installed with python
 import os
 from pathlib import Path
-from datetime import datetime, time, date
+from datetime import datetime, date
 
 from importlib.util import find_spec
 
@@ -75,10 +75,10 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
     """Gets the next date from a list of dates
 
     Args:
-        raid (datetime | list[datetime]): a datetime or list of datetime objects
+        raid (datetime | list[datetime]): a datetime or list of datetime objects.
 
     Returns:
-        datetime | None: The next date, or None if all the dates given were in the past.
+        (datetime | None): The next date, or None if all the dates given were in the past.
     """
     
     if not isinstance(raid, list):
@@ -188,14 +188,14 @@ def main() -> None:
     load_configuration()
     
     wednesday_raid = get_raid_datetime(
-        weekday = 2,
-        hour    = 19,
+        weekday = 5,
+        hour    = 13,
         minute  = 0
     )
 
     saturday_raid = get_raid_datetime(
-        weekday = 5,
-        hour    = 12,
+        weekday = 6,
+        hour    = 13,
         minute  = 0,
     )
 
