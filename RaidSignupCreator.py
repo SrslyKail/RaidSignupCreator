@@ -16,7 +16,6 @@ import requests
 from dotenv import load_dotenv
 from dateutil.relativedelta import relativedelta
 
-
 def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
     # Get the next instance of the given day
     next_date = datetime.today() + relativedelta(weekday=weekday)
@@ -63,10 +62,10 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
     """Gets the next date from a list of dates
 
     Args:
-        raid (datetime | list[datetime]): a datetime or list of datetime objects
+        raid (datetime | list[datetime]): a datetime or list of datetime objects.
 
     Returns:
-        datetime | None: The next date, or None if all the dates given were in the past.
+        (datetime | None): The next date, or None if all the dates given were in the past.
     """
     
     if not isinstance(raid, list):
@@ -175,19 +174,19 @@ def getEnvVariable(variableName: str) -> str:
 def main() -> None:
     load_configuration()
     
-    wednesday_raid = get_raid_datetime(
-        weekday = 2,
-        hour    = 19,
+    saturday_raid = get_raid_datetime(
+        weekday = 5,
+        hour    = 13,
         minute  = 0
     )
 
-    saturday_raid = get_raid_datetime(
-        weekday = 5,
-        hour    = 12,
+    sunday_raid = get_raid_datetime(
+        weekday = 6,
+        hour    = 13,
         minute  = 0,
     )
 
-    raid_dates = [wednesday_raid, saturday_raid]
+    raid_dates = [saturday_raid, sunday_raid]
 
     CHANNEL_ID = getEnvVariable('CHANNEL_ID')
     SERVER_ID  = getEnvVariable('SERVER_ID')
