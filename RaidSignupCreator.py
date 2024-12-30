@@ -23,7 +23,11 @@ all_sessions_info: dict
 
 def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
     # Get the next instance of the given day
-    next_date = datetime.today() + relativedelta(weekday=weekday)
+    today = datetime.today()
+    next_date = today + relativedelta(weekday=weekday)
+    # Lets us run it on the same day as a raid event and get the event for next week rather than the current week.
+    if next_date == today:
+        next_date += relativedelta(weeks=1)
     return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
@@ -93,6 +97,7 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
         (datetime | None): The next date, or None if all the dates given were in the past.
     """
 
+    # Ensure we have a list
     if not isinstance(raid, list):
         raid = [raid]
 
@@ -101,7 +106,7 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
         date for date in raid if datetime.now().date() < date.date()
     ]
 
-    if possible_dates is False:
+    if possible_dates is False or len(possible_dates) <= 0:
         return None
 
     # Get the next one
@@ -225,7 +230,11 @@ def main() -> None:
     load_configuration()
     print(namespace)
 
-    saturday_raid = get_raid_datetime(weekday=5, hour=13, minute=0)
+    saturday_raid = get_raid_datetime(
+        weekday=5,
+        hour=13,
+        minute=0
+    )
 
     sunday_raid = get_raid_datetime(
         weekday=6,
@@ -278,6 +287,7 @@ def create_raid_day(
     next_date = get_next_date(raid_dates)
 
     if next_date is None:
+        print("Date is none!")
         return
 
     if is_raid_day_available(next_date, all_sessions_info):
