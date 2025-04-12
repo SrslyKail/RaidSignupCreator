@@ -205,6 +205,11 @@ def submit_raid_request(
         "date": next_dateTime.strftime("%d-%m-%Y"),
         "time": next_dateTime.strftime("%H:%M"),
         "title": f"{get_last_session_title(sessions_info)} - {next_dateTime.strftime('%A')}",
+        # CB - TODO: Refactor this if it works so we can pull the desired data 
+        # from a file.
+        "advancedSettings":{
+            "lower_limit": 8
+        }
     }
 
     # Get the URL we want to post it to
