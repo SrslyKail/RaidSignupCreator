@@ -9,16 +9,16 @@ organized as localName: pip_intaller_name
 "dateutil":"python-dateutil"
 """
 
-import os
-from argparse import ArgumentParser, Namespace, BooleanOptionalAction
-from pathlib import Path
-from datetime import datetime, date
 import requests
-from dotenv import load_dotenv
+from dataclasses import asdict
+from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
+from modules.dataclasses import NewRaidPost, SessionInfo
+from modules.configuration import Config, ConfigFactory
 
-namespace = Namespace()
-all_sessions_info: dict
+
+class Raid:
+    def __init__(self) -> None: ...
 
 
 def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
@@ -29,54 +29,6 @@ def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
     if next_date == today:
         next_date += relativedelta(weeks=1)
     return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-
-def load_configuration() -> None:
-    """Loads the required environment variables from a .env file and checks that they loaded correctly.
-
-    Raises:
-        Exception: If the .env file is not located
-        Exception: If a environment variable is missing
-    """
-    # User must supply the following environment variables via the .env file:
-    required_env_variables = ["API_KEY", "SERVER_ID", "CHANNEL_ID", "DISCORD_ID"]
-    missing_vars: list[str] = []
-
-    # Get the current directory
-    current_dir = Path(__file__).parent
-    # Check the .env file exists
-    if Path(current_dir / ".env").exists is False:
-        raise Exception(f"Missing .env file. Check for a .env file at {current_dir}")
-
-    # If it does, load the file
-    load_dotenv()
-
-    # Check the variables were loaded
-    missing_vars = [
-        variable for variable in required_env_variables if os.getenv(variable) is None
-    ]
-
-    # if something is missing, raise an exception so the user can add it
-    if missing_vars:
-        raise NameError(f"Missing required environment variables: {missing_vars}")
-
-    parser: ArgumentParser = setup_parser()
-    parser.parse_args(namespace=namespace)
-
-    return
-
-
-def setup_parser() -> ArgumentParser:
-    parser: ArgumentParser = ArgumentParser()
-    parser.add_argument(
-        "-w",
-        "--weekly",
-        help="If you want to post all the raids for a single week at once",
-        action=BooleanOptionalAction,
-        dest="weekly",
-    )
-
-    return parser
 
 
 def get_post_event_url(SERVER_ID: str, CHANNEL_ID: str):
@@ -106,14 +58,14 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
         date for date in raid if datetime.now().date() < date.date()
     ]
 
-    if possible_dates is False or len(possible_dates) <= 0:
+    if len(possible_dates) <= 0:
         return None
 
     # Get the next one
     return min(possible_dates)
 
 
-def get_posted_session_data(SERVER_ID: str, API_KEY: str) -> dict:
+def get_posted_session_data(SERVER_ID: str, API_KEY: str) -> list[SessionInfo]:
     """Gets the historic data for the raids that have been run
 
     Args:
@@ -124,13 +76,16 @@ def get_posted_session_data(SERVER_ID: str, API_KEY: str) -> dict:
         dict: A dictionary of all the data.
     """
     events_url: str = get_events_info_url(SERVER_ID)
-    sessions_info: dict = dict(
+    postedEvents = dict(
         requests.get(url=events_url, headers={"Authorization": API_KEY}).json()
     )["postedEvents"]
+    sessions_info = [SessionInfo(**event) for event in postedEvents]
     return sessions_info
 
 
-def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
+def is_raid_day_available(
+    next_date: datetime, sessions_info: list[SessionInfo]
+) -> bool:
     """Checks if there is already a raid scheduled on the given day
 
     Args:
@@ -145,7 +100,7 @@ def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
 
     # If the date of the session is after the next_date, break
     for session in sessions_info:
-        unix_session_time = session["startTime"]
+        unix_session_time = session.startTime
         session_dateTime: date = datetime.fromtimestamp(unix_session_time).date()
 
         # If the next session is before the one we want to make
@@ -166,7 +121,7 @@ def is_raid_day_available(next_date: datetime, sessions_info: dict) -> bool:
     return False  # required to keep mypy happy
 
 
-def get_last_session_title(all_sessions_info: dict) -> str:
+def get_last_session_title(all_sessions_info: list[SessionInfo]) -> str:
     """
     Uses the title of the last session as the title of the next.
 
@@ -180,7 +135,7 @@ def get_last_session_title(all_sessions_info: dict) -> str:
     last_posted_event = all_sessions_info[0]
 
     # Get the title of the last session
-    last_session_title = last_posted_event["title"]
+    last_session_title = last_posted_event.title
 
     # Split it by [fight_name, date] and keep the fight_name
     next_session_title = last_session_title.split(" - ")[0]
@@ -189,57 +144,36 @@ def get_last_session_title(all_sessions_info: dict) -> str:
 
 
 def submit_raid_request(
-    next_dateTime: datetime,
-    sessions_info: dict,
-    CHANNEL_ID: str,
-    SERVER_ID: str,
-    API_KEY: str,
+    next_dateTime: datetime, all_sessions_info: list[SessionInfo], config: Config
 ):
     # Unix conversion, in case we want to use this later.
     # unix = time.mktime(next_dateTime.timetuple())
 
     # Put together the data we want to post up
-    dict = {
-        "leaderId": os.getenv("DISCORD_ID"),
-        "templateId": 10,
-        "date": next_dateTime.strftime("%d-%m-%Y"),
-        "time": next_dateTime.strftime("%H:%M"),
-        "title": f"{get_last_session_title(sessions_info)} - {next_dateTime.strftime('%A')}",
-        # CB - TODO: Refactor this if it works so we can pull the desired data 
-        # from a file.
-        "advancedSettings":{
-            "lower_limit": 8
-        }
-    }
+    raidPost = NewRaidPost(
+        leaderId=config.DISCORD_ID,
+        templateId=10,
+        date=next_dateTime.strftime("%d-%m-%Y"),
+        time=next_dateTime.strftime("%H:%M"),
+        title=f"{get_last_session_title(all_sessions_info)} - {next_dateTime.strftime('%A')}",
+        advancedSettings={"lower_limit": 8},
+    )
 
     # Get the URL we want to post it to
-    POST_URL = get_post_event_url(SERVER_ID, CHANNEL_ID)
+    POST_URL = get_post_event_url(config.SERVER_ID, config.CHANNEL_ID)
 
     # Post it
     requests.post(
         url=POST_URL,
-        headers={"Authorization": API_KEY, "Content-Type": "application/json"},
-        json=dict,
+        headers={"Authorization": config.API_KEY, "Content-Type": "application/json"},
+        json=asdict(raidPost),
     )
-
-
-def get_env_variable(variableName: str) -> str:
-    env_var: str | None = os.getenv(variableName)
-    if env_var is None:
-        raise KeyError(f"Missing environment variable: {variableName}")
-    return env_var
 
 
 def main() -> None:
-    global all_sessions_info
-    load_configuration()
-    print(namespace)
+    config: Config = ConfigFactory.createConfig()
 
-    saturday_raid = get_raid_datetime(
-        weekday=5,
-        hour=13,
-        minute=0
-    )
+    saturday_raid = get_raid_datetime(weekday=5, hour=13, minute=0)
 
     sunday_raid = get_raid_datetime(
         weekday=6,
@@ -249,44 +183,47 @@ def main() -> None:
 
     raid_dates: list[datetime] = [saturday_raid, sunday_raid]
 
-    CHANNEL_ID = get_env_variable("CHANNEL_ID")
-    SERVER_ID = get_env_variable("SERVER_ID")
-    API_KEY = get_env_variable("API_KEY")
+    all_sessions_info: list[SessionInfo] = get_posted_session_data(
+        config.SERVER_ID, config.API_KEY
+    )
 
-    all_sessions_info = get_posted_session_data(SERVER_ID, API_KEY)
-
-    if namespace.weekly:
+    if config.WEEKLY:
         create_raid_week(
             raid_dates=raid_dates,
-            CHANNEL_ID=CHANNEL_ID,
-            SERVER_ID=SERVER_ID,
-            API_KEY=API_KEY,
+            config=config,
+            all_sessions_info=all_sessions_info,
         )
     else:
         create_raid_day(
             raid_dates=raid_dates,
-            CHANNEL_ID=CHANNEL_ID,
-            SERVER_ID=SERVER_ID,
-            API_KEY=API_KEY,
+            config=config,
+            all_sessions_info=all_sessions_info,
         )
 
 
 def create_raid_week(
-    raid_dates: list[datetime], CHANNEL_ID: str, SERVER_ID: str, API_KEY: str
+    raid_dates: list[datetime],
+    config: Config,
+    all_sessions_info: list[SessionInfo],
 ):
     # sort dates to make sure we're posting the earliest date in the week first
     raid_dates.sort(key=lambda date: date.isocalendar().weekday)
 
     for raid_day in raid_dates:
-        create_raid_day(raid_day, CHANNEL_ID, SERVER_ID, API_KEY)
+        create_raid_day(
+            raid_day,
+            config,
+            all_sessions_info,
+        )
 
     return
 
 
 def create_raid_day(
-    raid_dates: datetime | list[datetime], CHANNEL_ID: str, SERVER_ID: str, API_KEY: str
+    raid_dates: datetime | list[datetime],
+    config: Config,
+    all_sessions_info: list[SessionInfo],
 ):
-    global all_sessions_info
 
     next_date: datetime | None
     next_date = get_next_date(raid_dates)
@@ -297,9 +234,7 @@ def create_raid_day(
 
     if is_raid_day_available(next_date, all_sessions_info):
         # Submit next raid
-        submit_raid_request(
-            next_date, all_sessions_info, CHANNEL_ID, SERVER_ID, API_KEY
-        )
+        submit_raid_request(next_date, all_sessions_info, config)
     else:
         print(f"Event already exists on {next_date.strftime('%d-%m-%Y')}")
 
