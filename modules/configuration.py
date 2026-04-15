@@ -13,6 +13,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Config:
     API_KEY: str
+    API_ROUTE: str
     SERVER_ID: str
     CHANNEL_ID: str
     DISCORD_ID: str
@@ -39,6 +40,7 @@ class ConfigFactory:
         raid_days = [self.__get_raid_datetime(**date) for date in date_data]
         return Config(
             API_KEY=os.environ["API_KEY"],
+            API_ROUTE="https://raid-helper.xyz/api/v4",
             SERVER_ID=os.environ["SERVER_ID"],
             CHANNEL_ID=os.environ["CHANNEL_ID"],
             DISCORD_ID=os.environ["DISCORD_ID"],
