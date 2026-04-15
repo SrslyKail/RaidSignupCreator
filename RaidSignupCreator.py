@@ -180,8 +180,8 @@ def main() -> None:
         hour=13,
         minute=0,
     )
-
-    raid_dates: list[datetime] = [saturday_raid, sunday_raid]
+    _raid_dates: list[datetime] = [saturday_raid, sunday_raid]
+    raid_dates: list[datetime] = config.RAID_DAYS
 
     all_sessions_info: list[SessionInfo] = get_posted_session_data(
         config.SERVER_ID, config.API_KEY

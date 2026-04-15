@@ -1,4 +1,7 @@
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import os
+import json
 from argparse import ArgumentParser, Namespace, BooleanOptionalAction
 from pathlib import Path
 from dotenv import load_dotenv
@@ -13,6 +16,7 @@ class Config:
     SERVER_ID: str
     CHANNEL_ID: str
     DISCORD_ID: str
+    RAID_DAYS: list[datetime]
     WEEKLY: bool
 
 
@@ -31,13 +35,25 @@ class ConfigFactory:
         self.__load_configuration()
 
     def __createConfig(self) -> Config:
+        date_data = json.loads(os.environ["RAID_DATES"])
+        raid_days = [self.__get_raid_datetime(**date) for date in date_data]
         return Config(
             API_KEY=os.environ["API_KEY"],
             SERVER_ID=os.environ["SERVER_ID"],
             CHANNEL_ID=os.environ["CHANNEL_ID"],
             DISCORD_ID=os.environ["DISCORD_ID"],
+            RAID_DAYS=raid_days,
             WEEKLY=self.namespace.weekly,
         )
+
+    def __get_raid_datetime(self, weekday: int, hour: int, minute: int) -> datetime:
+        # Get the next instance of the given day
+        today = datetime.today()
+        next_date = today + relativedelta(weekday=weekday)
+        # Lets us run it on the same day as a raid event and get the event for next week rather than the current week.
+        if next_date == today:
+            next_date += relativedelta(weeks=1)
+        return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     @classmethod
     def createConfig(cls) -> Config:
@@ -73,8 +89,8 @@ class ConfigFactory:
     def __validateEnvVariables(cls):
         missing_vars: list[str] = []
 
-        # Get the current directory
         current_dir = Path(__file__).parent
+
         # Check the .env file exists
         if Path(current_dir / ".." / ".env").exists is False:
             raise Exception(
