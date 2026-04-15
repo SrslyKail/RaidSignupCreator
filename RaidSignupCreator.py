@@ -31,12 +31,16 @@ def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
     return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
-def get_post_event_url(API_ROUTE: str, CHANNEL_ID: str):
-    return f"{API_ROUTE}/channels/{CHANNEL_ID}/event"
+def get_server_route(API_ROUTE: str, SERVER_ID: str) -> str:
+    return f"{API_ROUTE}/servers/{SERVER_ID}"
 
 
-def get_events_info_url(API_ROUTE: str, SERVER_ID: str):
-    return f"{API_ROUTE}/servers/{SERVER_ID}/events"
+def get_post_event_url(SERVER_ROUTE: str, CHANNEL_ID: str):
+    return f"{SERVER_ROUTE}/channels/{CHANNEL_ID}/event"
+
+
+def get_events_info_url(SERVER_ROUTE: str):
+    return f"{SERVER_ROUTE}/events"
 
 
 def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
@@ -65,9 +69,7 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
     return min(possible_dates)
 
 
-def get_posted_session_data(
-    API_ROUTE: str, SERVER_ID: str, API_KEY: str
-) -> list[SessionInfo]:
+def get_posted_session_data(SERVER_ROUTE: str, API_KEY: str) -> list[SessionInfo]:
     """Gets the historic data for the raids that have been run
 
     Args:
@@ -77,7 +79,7 @@ def get_posted_session_data(
     Returns:
         dict: A dictionary of all the data.
     """
-    events_url: str = get_events_info_url(API_ROUTE, SERVER_ID)
+    events_url: str = get_events_info_url(SERVER_ROUTE)
     raw_res = requests.get(url=events_url, headers={"Authorization": API_KEY})
     postedEvents = dict(raw_res.json())["postedEvents"]
     sessions_info = [SessionInfo(**event) for event in postedEvents]
@@ -161,14 +163,17 @@ def submit_raid_request(
     )
 
     # Get the URL we want to post it to
-    POST_URL = get_post_event_url(config.API_ROUTE, config.CHANNEL_ID)
+    SERVER_ROUTE: str = get_server_route(config.API_ROUTE, config.SERVER_ID)
+    POST_URL = get_post_event_url(SERVER_ROUTE, config.CHANNEL_ID)
 
     # Post it
-    requests.post(
+    res = requests.post(
         url=POST_URL,
         headers={"Authorization": config.API_KEY, "Content-Type": "application/json"},
         json=asdict(raidPost),
     )
+    if res.status_code == 200:
+        print(f"Created event on {raidPost.date}")
 
 
 def create_raid_week(
@@ -185,8 +190,6 @@ def create_raid_week(
             config,
             all_sessions_info,
         )
-
-    return
 
 
 def create_raid_day(
@@ -221,9 +224,10 @@ def main() -> None:
     )
 
     raid_dates: list[datetime] = [saturday_raid, sunday_raid]
+    SERVER_ROUTE: str = get_server_route(config.API_ROUTE, config.SERVER_ID)
 
     all_sessions_info: list[SessionInfo] = get_posted_session_data(
-        config.API_ROUTE, config.SERVER_ID, config.API_KEY
+        SERVER_ROUTE, config.API_KEY
     )
 
     if config.WEEKLY:
