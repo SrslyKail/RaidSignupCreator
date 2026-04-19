@@ -148,7 +148,7 @@ def get_last_session_title(all_sessions_info: list[SessionInfo]) -> str:
 
 def submit_raid_request(
     next_dateTime: datetime, all_sessions_info: list[SessionInfo], config: Config
-):
+) -> None:
     # Unix conversion, in case we want to use this later.
     # unix = time.mktime(next_dateTime.timetuple())
 
@@ -196,7 +196,7 @@ def create_raid_day(
     raid_dates: datetime | list[datetime],
     config: Config,
     all_sessions_info: list[SessionInfo],
-):
+) -> None:
 
     next_date: datetime | None
     next_date = get_next_date(raid_dates)
