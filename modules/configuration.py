@@ -27,6 +27,7 @@ class ConfigFactory:
         "SERVER_ID",
         "CHANNEL_ID",
         "DISCORD_ID",
+        "RAID_DATES",
     ]
 
     def __init__(self) -> None:
@@ -38,6 +39,14 @@ class ConfigFactory:
     def __createConfig(self) -> Config:
         date_data = json.loads(os.environ["RAID_DATES"])
         raid_days = [self.__get_raid_datetime(**date) for date in date_data]
+        env_weekly = os.getenv("WEEKLY")
+        # Note that the .env file overrides the command line argument.
+        weekly = (
+            self.namespace.weekly
+            if env_weekly is None
+            else env_weekly.lower() == "true"
+        )
+
         return Config(
             API_KEY=os.environ["API_KEY"],
             API_ROUTE="https://raid-helper.xyz/api/v4",
@@ -45,10 +54,10 @@ class ConfigFactory:
             CHANNEL_ID=os.environ["CHANNEL_ID"],
             DISCORD_ID=os.environ["DISCORD_ID"],
             RAID_DAYS=raid_days,
-            WEEKLY=self.namespace.weekly,
+            WEEKLY=weekly,
         )
 
-    def __get_raid_datetime(self, weekday: int, hour: int, minute: int) -> datetime:
+    def __get_raid_datetime(self, weekday: int, hour: int, minute: int = 0) -> datetime:
         # Get the next instance of the given day
         today = datetime.today()
         next_date = today + relativedelta(weekday=weekday)
@@ -62,12 +71,7 @@ class ConfigFactory:
         return cls().__createConfig()
 
     def __load_configuration(self) -> None:
-        """Loads the required environment variables from a .env file and checks that they loaded correctly.
-
-        Raises:
-            Exception: If the .env file is not located
-            Exception: If a environment variable is missing
-        """
+        """Loads the required environment variables from a .env file and checks that they loaded correctly."""
 
         parser: ArgumentParser = self.__setup_parser()
         parser.parse_args(namespace=self.namespace)

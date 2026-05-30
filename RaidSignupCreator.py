@@ -173,10 +173,12 @@ def submit_raid_request(
     SERVER_ROUTE: str = get_server_route(config.API_ROUTE, config.SERVER_ID)
     POST_URL = get_post_event_url(SERVER_ROUTE, config.CHANNEL_ID)
 
-    # Post it
     res = requests.post(
         url=POST_URL,
-        headers={"Authorization": config.API_KEY, "Content-Type": "application/json"},
+        headers={
+            "Authorization": config.API_KEY,
+            "Content-Type": "application/json",
+        },
         json=asdict(raidPost),
     )
     if res.status_code == 200:
@@ -222,15 +224,6 @@ def create_raid_day(
 def main() -> None:
     config: Config = ConfigFactory.createConfig()
 
-    saturday_raid = get_raid_datetime(weekday=DayOfWeek.SATURDAY, hour=12, minute=0)
-
-    sunday_raid = get_raid_datetime(
-        weekday=DayOfWeek.SUNDAY,
-        hour=12,
-        minute=0,
-    )
-
-    raid_dates: list[datetime] = [saturday_raid, sunday_raid]
     SERVER_ROUTE: str = get_server_route(config.API_ROUTE, config.SERVER_ID)
 
     all_sessions_info: list[SessionInfo] = get_posted_session_data(
@@ -239,13 +232,13 @@ def main() -> None:
 
     if config.WEEKLY:
         create_raid_week(
-            raid_dates=raid_dates,
+            raid_dates=config.RAID_DAYS,
             config=config,
             all_sessions_info=all_sessions_info,
         )
     else:
         create_raid_day(
-            raid_dates=raid_dates,
+            raid_dates=config.RAID_DAYS,
             config=config,
             all_sessions_info=all_sessions_info,
         )
