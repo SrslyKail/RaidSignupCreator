@@ -10,6 +10,7 @@ organized as localName: pip_intaller_name
 """
 
 import requests
+from enum import IntEnum
 from dataclasses import asdict
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
@@ -17,8 +18,14 @@ from modules.dataclasses import NewRaidPost, SessionInfo
 from modules.configuration import Config, ConfigFactory
 
 
-class Raid:
-    def __init__(self) -> None: ...
+class DayOfWeek(IntEnum):
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY = 6
 
 
 def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
@@ -215,10 +222,10 @@ def create_raid_day(
 def main() -> None:
     config: Config = ConfigFactory.createConfig()
 
-    saturday_raid = get_raid_datetime(weekday=5, hour=12, minute=0)
+    saturday_raid = get_raid_datetime(weekday=DayOfWeek.SATURDAY, hour=12, minute=0)
 
     sunday_raid = get_raid_datetime(
-        weekday=6,
+        weekday=DayOfWeek.SUNDAY,
         hour=12,
         minute=0,
     )
