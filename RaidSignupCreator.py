@@ -215,11 +215,11 @@ def create_raid_day(
 def main() -> None:
     config: Config = ConfigFactory.createConfig()
 
-    saturday_raid = get_raid_datetime(weekday=5, hour=13, minute=0)
+    saturday_raid = get_raid_datetime(weekday=5, hour=12, minute=0)
 
     sunday_raid = get_raid_datetime(
         weekday=6,
-        hour=13,
+        hour=12,
         minute=0,
     )
 
