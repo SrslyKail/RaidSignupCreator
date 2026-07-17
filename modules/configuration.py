@@ -1,3 +1,9 @@
+"""
+This module contains all the required code to extract and handle the required variables for the system to run.
+
+The keys are the Config class, which is a readonly dataclass to ensure the values don't change during runtime, and the ConfigFactory.createConfig() function, which creates a Config object for you and ensures it's set up correctly.
+"""
+
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import os
@@ -6,32 +12,37 @@ from argparse import ArgumentParser, Namespace, BooleanOptionalAction
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import ClassVar
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, MISSING
 
 
-# Read-only dataclass that contains the required config :)
 @dataclass(frozen=True)
 class Config:
+    """Read-only dataclass that contains the required varibles for the system to run."""
+
     API_KEY: str
-    API_ROUTE: str
     SERVER_ID: str
     CHANNEL_ID: str
     DISCORD_ID: str
-    RAID_DAYS: list[datetime]
+    RAID_DATES: list[datetime]
     WEEKLY: bool
+    API_ROUTE: str = "https://raid-helper.xyz/api/v4"
 
 
 class ConfigFactory:
+    """Factory for generating Config files.
+
+    You can call ConfigFactory.createConfig() to quickly get a Config file.
+
+    Raises:
+        FileNotFoundError: If the .env file is not found.
+        ValueError: If a required config value is missing.
+    """
+
     REQUIRED_ENV_VARIABLES: ClassVar[list[str]] = [
-        "API_KEY",
-        "SERVER_ID",
-        "CHANNEL_ID",
-        "DISCORD_ID",
-        "RAID_DATES",
+        field.name for field in fields(Config) if field.default is MISSING
     ]
 
     def __init__(self) -> None:
-
         self.namespace = Namespace()
         self.__validateEnvVariables()
         self.__load_configuration()
@@ -49,11 +60,10 @@ class ConfigFactory:
 
         return Config(
             API_KEY=os.environ["API_KEY"],
-            API_ROUTE="https://raid-helper.xyz/api/v4",
             SERVER_ID=os.environ["SERVER_ID"],
             CHANNEL_ID=os.environ["CHANNEL_ID"],
             DISCORD_ID=os.environ["DISCORD_ID"],
-            RAID_DAYS=raid_days,
+            RAID_DATES=raid_days,
             WEEKLY=weekly,
         )
 
@@ -68,6 +78,11 @@ class ConfigFactory:
 
     @classmethod
     def createConfig(cls) -> Config:
+        """Ensures the proper setup and creation of a config object for the rest of the system.
+
+        Returns:
+            Config: A frozen dataclass that contains all the required environment variables.
+        """
         return cls().__createConfig()
 
     def __load_configuration(self) -> None:
@@ -99,7 +114,7 @@ class ConfigFactory:
 
         # Check the .env file exists
         if Path(current_dir / ".." / ".env").exists is False:
-            raise Exception(
+            raise FileNotFoundError(
                 f"Missing .env file. Check for a .env file at {current_dir}"
             )
 

@@ -1,19 +1,10 @@
 #!/usr/bin/python3
 
-"""
-Keeping this chunk around because I found it useful to remind
-myself what the package names are called in pip
-organized as localName: pip_intaller_name
-"requests":"requests",
-"dotenv":"python-dotenv",
-"dateutil":"python-dateutil"
-"""
-
 import requests
 from enum import IntEnum
+from typing import Final
 from dataclasses import asdict
 from datetime import datetime, date
-from dateutil.relativedelta import relativedelta
 from modules.dataclasses import NewRaidPost, SessionInfo
 from modules.configuration import Config, ConfigFactory
 
@@ -28,14 +19,8 @@ class DayOfWeek(IntEnum):
     SUNDAY = 6
 
 
-def get_raid_datetime(weekday: int, hour: int, minute: int) -> datetime:
-    # Get the next instance of the given day
-    today = datetime.today()
-    next_date = today + relativedelta(weekday=weekday)
-    # Lets us run it on the same day as a raid event and get the event for next week rather than the current week.
-    if next_date == today:
-        next_date += relativedelta(weeks=1)
-    return next_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+REQUIRED_MEMBER_COUNT: Final[int] = 8
+FF14_TEMPLATE_ID: Final[int] = 10
 
 
 def get_server_route(API_ROUTE: str, SERVER_ID: str) -> str:
@@ -59,6 +44,7 @@ def get_next_date(raid: datetime | list[datetime]) -> datetime | None:
     Returns:
         (datetime | None): The next date, or None if all the dates given were in the past.
     """
+    # TODO: Turn this function into a Generator.
 
     # Ensure we have a list
     if not isinstance(raid, list):
@@ -106,29 +92,13 @@ def is_raid_day_available(
         bool: True if the day is available, False if it is not
     """
 
-    next_session = next_date.date()
+    next_session: date = next_date.date()
+    session_dates: list[date] = [
+        datetime.fromtimestamp(session.startTime).date() for session in sessions_info
+    ]
 
-    # If the date of the session is after the next_date, break
-    for session in sessions_info:
-        unix_session_time = session.startTime
-        session_dateTime: date = datetime.fromtimestamp(unix_session_time).date()
-
-        # If the next session is before the one we want to make
-        if session_dateTime < next_session:
-            # We're clear to make a new one
-            return True
-        elif (
-            session_dateTime > next_session
-        ):  # TODO: CB: Try removing this, I don't think we need it.
-            # If its after the one we wanna make, keep checking
-            continue
-        elif session_dateTime == next_session:
-            # If its the same, we dont want to make a new one
-            return False
-        else:
-            continue
-
-    return False  # required to keep mypy happy
+    # Check that we don't have any duplicate dates.
+    return all(next_session != session_date for session_date in session_dates)
 
 
 def get_last_session_title(all_sessions_info: list[SessionInfo]) -> str:
@@ -147,7 +117,7 @@ def get_last_session_title(all_sessions_info: list[SessionInfo]) -> str:
     # Get the title of the last session
     last_session_title = last_posted_event.title
 
-    # Split it by [fight_name, date] and keep the fight_name
+    # Split it by [fight_name, everything else] and keep the fight_name
     next_session_title = last_session_title.split(" - ")[0]
 
     return next_session_title
@@ -162,11 +132,11 @@ def submit_raid_request(
     # Put together the data we want to post up
     raidPost = NewRaidPost(
         leaderId=config.DISCORD_ID,
-        templateId=10,
+        templateId=FF14_TEMPLATE_ID,
         date=next_dateTime.strftime("%d-%m-%Y"),
         time=next_dateTime.strftime("%H:%M"),
         title=f"{get_last_session_title(all_sessions_info)} - {next_dateTime.strftime('%A')}",
-        advancedSettings={"lower_limit": 8},
+        advancedSettings={"lower_limit": REQUIRED_MEMBER_COUNT},
     )
 
     # Get the URL we want to post it to
@@ -232,13 +202,13 @@ def main() -> None:
 
     if config.WEEKLY:
         create_raid_week(
-            raid_dates=config.RAID_DAYS,
+            raid_dates=config.RAID_DATES,
             config=config,
             all_sessions_info=all_sessions_info,
         )
     else:
         create_raid_day(
-            raid_dates=config.RAID_DAYS,
+            raid_dates=config.RAID_DATES,
             config=config,
             all_sessions_info=all_sessions_info,
         )
